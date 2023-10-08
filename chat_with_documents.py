@@ -87,7 +87,7 @@ if __name__ == "__main__":
 
         if uploaded_file and add_data:
             if os_api_key =="":
-                st.error("Please enter a valid Open Api Key.",icon="🚫 ")
+                st.error("Please enter a valid Open Api Key.",icon="🚫")
             else:
                 with st.spinner('Reading, chunking and embedding file ...'):
                     bytes_data = uploaded_file.read()
