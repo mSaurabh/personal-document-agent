@@ -78,7 +78,7 @@ if __name__ == "__main__":
     with st.sidebar:
         api_key = st.text_input('Open API key:', type='password',value=os_api_key)
         if api_key:
-            os.environ.OPEN_API_KEY = api_key
+            os.environ['OPENAI_API_KEY'] = api_key
 
         uploaded_file = st.file_uploader('Upload a file:',type=['pdf','docx','txt'])
         chunk_size = st.number_input('Chunk size:',min_value=100,max_value=2048,value=512,on_change=clear_history)
