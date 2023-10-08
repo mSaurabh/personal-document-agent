@@ -86,7 +86,7 @@ if __name__ == "__main__":
         add_data = st.button('Add Data',on_click=clear_history)
 
         if uploaded_file and add_data:
-            if os_api_key or api_key =="":
+            if  api_key =="":
                 st.error("Please enter a valid Open Api Key.",icon="🚫")
             else:
                 with st.spinner('Reading, chunking and embedding file ...'):
@@ -108,9 +108,9 @@ if __name__ == "__main__":
 
                     st.success('File Uploaded, chunked and embedded successfully.')
 
-    q = st.text_input('Ask a question about the content of your file:',disabled=(os_api_key or api_key == ""))
+    q = st.text_input('Ask a question about the content of your file:',disabled= api_key == "")
     if q:
-        if os_api_key == "":
+        if api_key == "":
             st.error("Please enter a valid Open Api Key.",icon="🚫")
         if 'vs' in st.session_state:
             vector_store = st.session_state.vs
