@@ -1,12 +1,7 @@
 import streamlit as st
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores.chroma import Chroma
-import chromadb
 import os
-__import__('pysqlite3')
-import sys
-
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 def load_document(file):
     import os
