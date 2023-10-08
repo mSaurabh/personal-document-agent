@@ -1,7 +1,6 @@
 import streamlit as st
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores.chroma import Chroma
-import chromadb
 import os
 __import__('pysqlite3')
 import sys
