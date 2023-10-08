@@ -68,11 +68,15 @@ if __name__ == "__main__":
     from dotenv import load_dotenv, find_dotenv
     load_dotenv(find_dotenv(), override=True)
 
+    
     st.image('image.png')
     st.divider()
     st.subheader('LLM Question-Answering Application 🤖')
+    os_api_key = os.environ.get('OPENAI_API_KEY') or ""
+    
+    
     with st.sidebar:
-        api_key = st.text_input('Open API key:', type='password')
+        api_key = st.text_input('Open API key:', type='password',value=os_api_key)
         if api_key:
             os.environ.OPEN_API_KEY = api_key
 
@@ -82,30 +86,34 @@ if __name__ == "__main__":
         add_data = st.button('Add Data',on_click=clear_history)
 
         if uploaded_file and add_data:
-            with st.spinner('Reading, chunking and embedding file ...'):
-                bytes_data = uploaded_file.read()
-                file_name = os.path.join('./',uploaded_file.name)
+            if os_api_key =="":
+                st.error("Please enter a valid Open Api Key.",icon="🚫 ")
+            else:
+                with st.spinner('Reading, chunking and embedding file ...'):
+                    bytes_data = uploaded_file.read()
+                    file_name = os.path.join('./',uploaded_file.name)
 
-                with open(file_name, 'wb') as f:
-                    f.write(bytes_data)
-                
-                data = load_document(file_name)
-                chunks = chunk_data(data,chunk_size=chunk_size)
-                st.write(f'Chunk Size:{chunk_size}, Chunks:{len(chunks)}')
+                    with open(file_name, 'wb') as f:
+                        f.write(bytes_data)
+                    
+                    data = load_document(file_name)
+                    chunks = chunk_data(data,chunk_size=chunk_size)
+                    st.write(f'Chunk Size:{chunk_size}, Chunks:{len(chunks)}')
 
-                tokens, embedding_cost = calculate_embedding_cost(chunks)
-                st.write(f'Embedding Cost:${embedding_cost:.4f}')
+                    tokens, embedding_cost = calculate_embedding_cost(chunks)
+                    st.write(f'Embedding Cost:${embedding_cost:.4f}')
 
-                vector_store = create_embeddings(chunks)
-                st.session_state.vs = vector_store
+                    vector_store = create_embeddings(chunks)
+                    st.session_state.vs = vector_store
 
-                st.success('File Uploaded, chunked and embedded successfully.')
+                    st.success('File Uploaded, chunked and embedded successfully.')
 
-    q = st.text_input('Ask a question about the content of your file:')
+    q = st.text_input('Ask a question about the content of your file:',disabled=os_api_key == "")
     if q:
+        if os_api_key == "":
+            st.error("Please enter a valid Open Api Key.",icon="🚫")
         if 'vs' in st.session_state:
             vector_store = st.session_state.vs
-            st.write(f'k: {k}')
             answer = ask_and_get_answer(vector_store,q,k)
             st.text_area('LLM Answer: ',value=answer);
     
