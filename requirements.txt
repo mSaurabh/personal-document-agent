@@ -1,4 +1,5 @@
 openai
+pysqlite3
 docx2txt
 pypdf
 streamlit

@@ -3,6 +3,7 @@ from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores.chroma import Chroma
 import os
 
+
 def load_document(file):
     import os
     name, extension = os.path.splitext(file)
