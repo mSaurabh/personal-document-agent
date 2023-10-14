@@ -70,8 +70,9 @@ if __name__ == "__main__":
 
     
     st.image('image.png')
-    st.divider()
     st.subheader('LLM Question-Answering Application 🤖')
+    st.caption('By Saurabh Mankar')
+    st.divider()
     os_api_key = os.environ.get('OPENAI_API_KEY') or ""
     
     
