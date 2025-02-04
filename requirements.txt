@@ -4,4 +4,4 @@ pypdf
 streamlit
 chromadb
 tiktoken
-langchain
+langchain-community
