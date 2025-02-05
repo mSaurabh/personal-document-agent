@@ -1,6 +1,6 @@
 import streamlit as st
-from langchain_community.embeddings.openai import OpenAIEmbeddings
-from langchain_community.vectorstores.chroma import Chroma
+from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain.vectorstores.chroma import Chroma
 import os
 
 def load_document(file):
@@ -9,13 +9,13 @@ def load_document(file):
     
     print(f'Loading {file}...')
     if extension == ".pdf":
-        from langchain_community.document_loaders import PyPDFLoader
+        from langchain.document_loaders import PyPDFLoader
         loader = PyPDFLoader(file)
     elif extension == ".docx":
-        from langchain_community.document_loaders import Docx2txtLoader
+        from langchain.document_loaders import Docx2txtLoader
         loader = Docx2txtLoader(file)
     elif extension == ".txt":
-        from langchain_community.document_loaders import TextLoader
+        from langchain.document_loaders import TextLoader
         loader = TextLoader(file)
     else:
         print(f'Document extension {extension} is not supported.')
@@ -24,7 +24,7 @@ def load_document(file):
     return data
 
 def chunk_data(data, chunk_size=256, chunk_overlap=20):
-    from langchain_community.text_splitters import RecursiveCharacterTextSplitter
+    from langchain.text_splitter import RecursiveCharacterTextSplitter
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size,
                                                    chunk_overlap=chunk_overlap)
     chunks = text_splitter.split_documents(data)
@@ -37,8 +37,16 @@ def create_embeddings(chunks):
 
 # higher the k value the pricier it will be as you'll 
 # use more tokens to get more accurate answer.
-def ask_and_get_answer(vector_store, q, k=3):
-    pass
+def ask_and_get_answer(vector_store,q,k=3):
+    from langchain.chains import RetrievalQA
+    from langchain.chat_models import ChatOpenAI
+    llm = ChatOpenAI(model='gpt-3.5-turbo',temperature=1)
+    retriever = vector_store.as_retriever(search_type='similarity',search_kwargs={'k':k})
+    chain = RetrievalQA.from_chain_type(llm=llm,chain_type='stuff',retriever=retriever)
+    
+    answer = chain.run(q)
+    
+    return answer
 
 def calculate_embedding_cost(texts):
     import tiktoken
