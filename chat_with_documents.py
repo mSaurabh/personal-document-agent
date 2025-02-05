@@ -1,5 +1,5 @@
 import streamlit as st
-from langchain.embeddings.openai import OpenAIEmbeddings
+from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores.chroma import Chroma
 import os
 
@@ -64,6 +64,9 @@ def clear_history():
     if 'history' in st.session_state:
         del st.session_state['history']
 if __name__ == "__main__":
+    import chromadb
+    chromadb.api.client.SharedSystemClient.clear_system_cache()
+
     import os
     from dotenv import load_dotenv, find_dotenv
     load_dotenv(find_dotenv(), override=True)

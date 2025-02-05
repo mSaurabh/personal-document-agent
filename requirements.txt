@@ -5,3 +5,5 @@ streamlit
 chromadb
 tiktoken
 langchain
+langchain-community
+boto3
