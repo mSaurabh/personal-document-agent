@@ -4,6 +4,13 @@ import os
 import streamlit as st
 import json
 from langchain.vectorstores import Chroma
+from langchain.embeddings import OpenAIEmbeddings
+import os
+from pinecone import Pinecone
+from langchain.vectorstores import Pinecone as PineconeVectorStore
+
+# Initialize the Bedrock runtime client
+bedrock_runtime = boto3.client('bedrock-runtime', region_name='us-east-1')
 
 def load_document(file):
     import os
@@ -32,55 +39,78 @@ def chunk_data(data, chunk_size=256, chunk_overlap=20):
     chunks = text_splitter.split_documents(data)
     return chunks
     
+def generate_embeddings(chunk):    
+    # Prepare the payload        
+    payload = {"inputText": str(chunk)}
+
+    # Invoke the model
+    response = bedrock_runtime.invoke_model(
+        modelId='amazon.titan-embed-text-v1',
+        contentType='application/json',
+        accept='application/json',
+        body=json.dumps(payload)
+    )
+    
+    # Parse the response
+    result = json.loads(response['body'].read().decode())
+    embedding = result['embedding']  # Adjust based on actual response structure
+    return embedding
 
 def create_embeddings(chunks):
-    # # Use Amazon Bedrock for embeddings
-    # client = boto3.client("bedrock-runtime", region_name="us-east-1")
-
-    # embeddings = []
-    # for chunk in chunks:
-    #     # Extract text content from the chunk 
-    #     #TODO - Add support for other types of data
-    #     #TODO - Might want to change 'text' to 'page-content' or something else
-    #     text_content = chunk['text'] if 'text' in chunk else str(chunk)
-    #     response = client.invoke_model(
-    #         modelId='arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-v2',
-    #         contentType='application/json',
-    #         accept='application/json',
-    #         body=json.dumps({
-    #             "prompt": f"Human: {text_content} Assistant:",
-    #             "max_tokens_to_sample": 100  # Adjust this value as needed
-    #         })
-    #     )
-    #     embeddings.append(response['embedding'])
-
-    embeddings = []
-    for chunk in chunks:
-        # Initialize the Bedrock runtime client
-        client = boto3.client('bedrock-runtime', region_name='us-east-1')
-        
-        # Prepare the payload        
-        payload = {"inputText": str(chunk)}
-
-        # Invoke the model
-        response = client.invoke_model(
-            modelId='amazon.titan-embed-text-v1',
-            contentType='application/json',
-            accept='application/json',
-            body=json.dumps(payload)
-        )
-        
-        # Parse the response
-        result = json.loads(response['body'].read().decode())
-        embeddings.append(result['embedding'])  # Adjust based on actual response structure
-
-    print(f'Embeddings: {embeddings}')
     # Assuming you have a way to store these embeddings, e.g., in a vector store
-    vector_store = Chroma.from_documents(chunks, embeddings)
+    vector_store = PineconeVectorStore.from_documents(chunks, generate_embeddings, index_name='doc-chats')
     return vector_store
 
 def ask_and_get_answer(vector_store,q,k=3):
-    return "Hello World!"
+    from langchain_core.prompts import PromptTemplate
+    from langchain_core.runnables import RunnablePassthrough
+    from langchain_core.output_parsers import StrOutputParser
+    from langchain_community.chat_models import BedrockChat
+
+    model_kwargs =  { 
+        "max_tokens": 2048,
+        "temperature": 0.0,
+        "top_k": 250,
+        "top_p": 1,
+        "stop_sequences": ["\n\nHuman"],
+    }
+
+    model_id = "anthropic.claude-v2"
+
+    model = BedrockChat(
+        client=bedrock_runtime,
+        model_id=model_id,
+        model_kwargs=model_kwargs
+    )
+
+    template = """
+Answer the question based on the given information. Do not provide any information that is not in the text:
+{context}
+
+Do not use the phrase 'Based on the document' or any similar phrase.
+
+Question: {question}
+"""
+
+    prompt = PromptTemplate.from_template(template)
+
+    # Retrieve and Generate
+    retriever = vector_store.as_retriever(
+        search_type="mmr", # Also test "similarity"
+        search_kwargs={"k": 8},
+    )
+
+    print ("RETRIEVED")
+    print (retriever)
+
+    chain = (
+        {"context": retriever, "question": RunnablePassthrough()}
+        | prompt
+        | model
+        | StrOutputParser()
+    )
+
+    return chain.invoke(q)
 
 def clear_history():
     if 'history' in st.session_state:
@@ -91,6 +121,8 @@ if __name__ == "__main__":
     chromadb.api.client.SharedSystemClient.clear_system_cache()
 
     load_dotenv(find_dotenv(), override=True)
+    
+    pc = Pinecone(os.environ.get("PINECONE_API_KEY"))
 
     st.image('image.png')
     st.divider()
