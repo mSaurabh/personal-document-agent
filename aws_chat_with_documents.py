@@ -64,6 +64,8 @@ def ask_and_get_answer(vector_store,q,k=3):
     from langchain_core.runnables import RunnablePassthrough
     from langchain_core.output_parsers import StrOutputParser
     from langchain_community.chat_models import BedrockChat
+    
+    global guardrails_list
 
     model_kwargs =  { 
         "max_tokens": 2048,
@@ -81,17 +83,11 @@ def ask_and_get_answer(vector_store,q,k=3):
         model_kwargs=model_kwargs
     )
 
-    template = """
-Answer the question based on the given information:
-{context}
-
-Follow each of the following guardrails:
-Use only the information provided in the document.
-Provide concise and accurate answers.
-Do not include any external information or assumptions.
-
-Question: {question}
-"""
+    template =  "Answer the question based on the given information:\n" + \
+                "{context}\n" + \
+                "Follow each of the following guardrails:\n" + \
+                guardrails_list + "\n" + \
+                "Question: {question}\n"
 
     prompt = PromptTemplate.from_template(template)
 
@@ -100,9 +96,6 @@ Question: {question}
         search_type="mmr", # Also test "similarity"
         search_kwargs={"k": 8},
     )
-
-    print ("RETRIEVED")
-    print (retriever)
 
     chain = (
         {"context": retriever, "question": RunnablePassthrough()}
@@ -143,9 +136,20 @@ if __name__ == "__main__":
             os.environ['AWS_SECRET_ACCESS_KEY'] = secret_key
             os.environ['AWS_SESSION_TOKEN'] = session_token
 
+        global guardrails_list
+
         uploaded_file = st.file_uploader('Upload a file:', type=['pdf', 'docx', 'txt'])
         chunk_size = st.number_input('Chunk size:', min_value=100, max_value=2048, value=512, on_change=clear_history)
         k = st.number_input('k', min_value=1, max_value=20, value=3, on_change=clear_history)
+        guardrails_on = st.checkbox('Enable Guardrails', value=True)
+        if guardrails_on:
+            print("Guardrails enabled")
+            guardrails_list = """Use only the information provided in the document.
+Provide concise and accurate answers.
+Do not include any external information or assumptions."""
+        else:
+            print("Guardrails disabled")
+            guardrails_list = ""
         add_data = st.button('Add Data', on_click=clear_history)
 
         if uploaded_file and add_data:
