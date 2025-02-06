@@ -3,8 +3,6 @@ from dotenv import load_dotenv, find_dotenv
 import os
 import streamlit as st
 import json
-from langchain.vectorstores import Chroma
-from langchain.embeddings import OpenAIEmbeddings
 import os
 from pinecone import Pinecone
 from langchain.vectorstores import Pinecone as PineconeVectorStore
@@ -84,10 +82,13 @@ def ask_and_get_answer(vector_store,q,k=3):
     )
 
     template = """
-Answer the question based on the given information. Do not provide any information that is not in the text:
+Answer the question based on the given information:
 {context}
 
-Do not use the phrase 'Based on the document' or any similar phrase.
+Follow each of the following guardrails:
+Use only the information provided in the document.
+Provide concise and accurate answers.
+Do not include any external information or assumptions.
 
 Question: {question}
 """
