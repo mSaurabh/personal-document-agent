@@ -7,3 +7,4 @@ tiktoken
 langchain
 langchain-community
 boto3
+pinecone
