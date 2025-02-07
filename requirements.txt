@@ -4,4 +4,7 @@ pypdf
 streamlit
 chromadb
 tiktoken
+langchain
 langchain-community
+boto3
+pinecone
