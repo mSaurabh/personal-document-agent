@@ -2,6 +2,8 @@ import streamlit as st
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.vectorstores.chroma import Chroma
 import os
+from pinecone import Pinecone
+from langchain.vectorstores import Pinecone as PineconeVectorStore
 
 def load_document(file):
     import os
@@ -32,7 +34,7 @@ def chunk_data(data, chunk_size=256, chunk_overlap=20):
     
 def create_embeddings(chunks):
     embeddings = OpenAIEmbeddings()
-    vector_store = Chroma.from_documents(chunks, embeddings)
+    vector_store = PineconeVectorStore.from_documents(chunks, embeddings, index_name='doc-chats')
     return vector_store
 
 # higher the k value the pricier it will be as you'll 
@@ -63,11 +65,12 @@ def clear_history():
 if __name__ == "__main__":
     import chromadb
     chromadb.api.client.SharedSystemClient.clear_system_cache()
-
+    
     import os
     from dotenv import load_dotenv, find_dotenv
     load_dotenv(find_dotenv(), override=True)
 
+    pc = Pinecone(api_key=os.environ.get("PINECONE_API_KEY"))
     
     st.image('image.png')
     st.divider()
