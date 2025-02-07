@@ -16,7 +16,6 @@ def load_document(file):
     Load a document based on its file extension.
     Supports PDF, DOCX, and TXT formats.
     """
-    import os
     from langchain.document_loaders import PyPDFLoader, Docx2txtLoader, TextLoader
     
     name, extension = os.path.splitext(file)
@@ -54,6 +53,12 @@ def chunk_data(data, chunk_size=256, chunk_overlap=20):
                                                    chunk_overlap=chunk_overlap)
     chunks = text_splitter.split_documents(data)
     return chunks
+
+def filter_chunks_by_role(chunks, role):
+    # Implement your filtering logic here
+    # For example, you can filter chunks that contain the role keyword
+    filtered_chunks = [chunk for chunk in chunks if role.lower() in chunk.page_content.lower()]
+    return filtered_chunks
 
 def generate_embeddings(chunk):    
     """
@@ -95,7 +100,7 @@ def create_embeddings(chunks):
     vector_store = PineconeVectorStore.from_documents(chunks, generate_embeddings, index_name='doc-chats')
     return vector_store
 
-def ask_and_get_answer(vector_store, q, k=3):
+def ask_and_get_answer(vector_store, q, role=None, k=3):
     """
     Ask a question and get an answer using the Bedrock model and a vector store.
     
@@ -147,9 +152,14 @@ def ask_and_get_answer(vector_store, q, k=3):
         + result_string,
     }
     '''
+
     # Define the prompt template
-    template =  "Answer the question based on the given information:\n" + \
-                "{context}\n" + \
+    if role:
+        template = f"You are answering as a {role}. Only provide answers relevant to this role based on the given information:\n"
+    else:
+        template =  "Answer the question based on the given information:\n" 
+        
+    template += "{context}\n" + \
                 "Follow each of the following guardrails:\n" + \
                 guardrails_list + "\n" + \
                 "Question: {question}\n"
@@ -250,6 +260,11 @@ if __name__ == "__main__":
             save_guardrails("")
             
         # Button to add data
+        
+        # Dropdown for role selection
+        role = st.selectbox('Select Role', ['Incident Commander', 'Operational manager'])
+        st.session_state['selected_role'] = role  # Store the selected role in session state
+
         add_data = st.button('Add Data', on_click=clear_history)
 
         # Process the uploaded file when the button is clicked
@@ -266,8 +281,9 @@ if __name__ == "__main__":
                 # Load the document, chunk it, and create embeddings
                 data = load_document(file_name)
                 chunks = chunk_data(data, chunk_size=chunk_size)
-                vector_store = create_embeddings(chunks)
-                # Store the vector store in the session state
+                filtered_chunks = filter_chunks_by_role(chunks, role)
+                vector_store = create_embeddings(filtered_chunks)
+                # Further processing with vector_store
                 st.session_state.vs = vector_store
                 st.success('File Uploaded, chunked and embedded successfully.')
 
@@ -279,11 +295,10 @@ if __name__ == "__main__":
         if 'vs' in st.session_state:
             # Retrieve the vector store from the session state
             vector_store = st.session_state.vs
-            # Get the answer to the question using the vector store
-            answer = ask_and_get_answer(vector_store, q, k)
-            # Display the answer
-            st.text_area('LLM Answer: ', value=answer)
-            
+            role = st.session_state.get('selected_role', None)  # Get the selected role from session state
+            answer = ask_and_get_answer(vector_store, q, role, k)
+            st.text_area('LLM Answer: ',value=answer)
+    
             st.divider()
 
             # Maintain chat history in the session state
