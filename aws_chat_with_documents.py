@@ -110,6 +110,10 @@ def clear_history():
     if 'history' in st.session_state:
         del st.session_state['history']
 
+def save_guardrails(rules=""):
+    global guardrails_list
+    guardrails_list = rules 
+
 if __name__ == "__main__":
     import chromadb
     chromadb.api.client.SharedSystemClient.clear_system_cache()
@@ -117,6 +121,8 @@ if __name__ == "__main__":
     load_dotenv(find_dotenv(), override=True)
     
     pc = Pinecone(os.environ.get("PINECONE_API_KEY"))
+
+    save_guardrails("")
 
     st.image('image.png')
     st.divider()
@@ -136,20 +142,24 @@ if __name__ == "__main__":
             os.environ['AWS_SECRET_ACCESS_KEY'] = secret_key
             os.environ['AWS_SESSION_TOKEN'] = session_token
 
-        global guardrails_list
+        
 
         uploaded_file = st.file_uploader('Upload a file:', type=['pdf', 'docx', 'txt'])
         chunk_size = st.number_input('Chunk size:', min_value=100, max_value=2048, value=512, on_change=clear_history)
         k = st.number_input('k', min_value=1, max_value=20, value=3, on_change=clear_history)
         guardrails_on = st.checkbox('Enable Guardrails', value=True)
         if guardrails_on:
-            print("Guardrails enabled")
-            guardrails_list = """Use only the information provided in the document.
-Provide concise and accurate answers.
-Do not include any external information or assumptions."""
+            st.write('Guardrails are enabled.')
+            with st.expander('Edit Guardrails'):
+                rules = "Use only the information provided in the document.\n" + \
+                        "Provide concise and accurate answers.\n" + \
+                        "Do not include any external information or assumptions.\n"
+                
+                rules = st.text_area('Guardrails', label_visibility="collapsed", value=rules, height=100, on_change=save_guardrails)
         else:
-            print("Guardrails disabled")
-            guardrails_list = ""
+            st.write('Guardrails are disabled.')
+            save_guardrails("")
+            
         add_data = st.button('Add Data', on_click=clear_history)
 
         if uploaded_file and add_data:
