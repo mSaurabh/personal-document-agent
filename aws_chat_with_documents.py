@@ -136,23 +136,6 @@ def ask_and_get_answer(vector_store, q, role=None, k=3):
         model_kwargs=model_kwargs
     )
 
-
-    '''
-    Here is an example of what our prompt
-
-    {
-        "role": "system",
-        "content": f"""You are an AI assistant that summarizes financial data received from a
-        semantic search based on a user prompt
-        Output a well structured answer.
-        If the user query is a greeting ignore semantic search data and return a greeting.
-
-        Here is the User's question: {q}
-        Here is the semantic search data:"""
-        + result_string,
-    }
-    '''
-
     # Define the prompt template
     if role:
         template = f"You are answering as a {role}. Only provide answers relevant to this role based on the given information:\n"
