@@ -110,7 +110,7 @@ def clear_history():
     if 'history' in st.session_state:
         del st.session_state['history']
 
-def save_guardrails(rules=""):
+def save_guardrails(rules):
     global guardrails_list
     guardrails_list = rules 
 
@@ -122,7 +122,11 @@ if __name__ == "__main__":
     
     pc = Pinecone(os.environ.get("PINECONE_API_KEY"))
 
-    save_guardrails("")
+
+    default_rules = "Use only the information provided in the document.\n" + \
+                    "Provide concise and accurate answers.\n" + \
+                    "Do not include any external information or assumptions.\n"
+    save_guardrails(default_rules)
 
     st.image('image.png')
     st.divider()
@@ -151,11 +155,8 @@ if __name__ == "__main__":
         if guardrails_on:
             st.write('Guardrails are enabled.')
             with st.expander('Edit Guardrails'):
-                rules = "Use only the information provided in the document.\n" + \
-                        "Provide concise and accurate answers.\n" + \
-                        "Do not include any external information or assumptions.\n"
-                
-                rules = st.text_area('Guardrails', label_visibility="collapsed", value=rules, height=100, on_change=save_guardrails)
+                rules = st.text_area('Guardrails', label_visibility="collapsed", value=default_rules, height=100)
+                save_guardrails(rules if rules else "")
         else:
             st.write('Guardrails are disabled.')
             save_guardrails("")
