@@ -13,7 +13,6 @@ from langchain.vectorstores import Pinecone as PineconeVectorStore
 bedrock_runtime = boto3.client('bedrock-runtime', region_name='us-east-1')
 
 def load_document(file):
-    import os
     from langchain.document_loaders import PyPDFLoader, Docx2txtLoader, TextLoader
     
     name, extension = os.path.splitext(file)
@@ -38,7 +37,13 @@ def chunk_data(data, chunk_size=256, chunk_overlap=20):
                                                    chunk_overlap=chunk_overlap)
     chunks = text_splitter.split_documents(data)
     return chunks
-    
+
+def filter_chunks_by_role(chunks, role):
+    # Implement your filtering logic here
+    # For example, you can filter chunks that contain the role keyword
+    filtered_chunks = [chunk for chunk in chunks if role.lower() in chunk.page_content.lower()]
+    return filtered_chunks
+
 def generate_embeddings(chunk):    
     # Prepare the payload        
     payload = {"inputText": str(chunk)}
@@ -61,7 +66,7 @@ def create_embeddings(chunks):
     vector_store = PineconeVectorStore.from_documents(chunks, generate_embeddings, index_name='doc-chats')
     return vector_store
 
-def ask_and_get_answer(vector_store,q,k=3):
+def ask_and_get_answer(vector_store, q, role=None, k=3):
     from langchain_core.prompts import PromptTemplate
     from langchain_core.runnables import RunnablePassthrough
     from langchain_core.output_parsers import StrOutputParser
@@ -83,7 +88,17 @@ def ask_and_get_answer(vector_store,q,k=3):
         model_kwargs=model_kwargs
     )
 
-    template = """
+    if role:
+        template = f"""
+You are answering as a {role}. Only provide answers relevant to this role based on the given document:
+{{context}}
+
+Do not use the phrase 'Based on the document' or any similar phrase.
+
+Question: {{question}}
+"""
+    else:
+        template = """
 Answer the question based on the given information. Do not provide any information that is not in the text:
 {context}
 
@@ -99,9 +114,6 @@ Question: {question}
         search_type="mmr", # Also test "similarity"
         search_kwargs={"k": 8},
     )
-
-    print ("RETRIEVED")
-    print (retriever)
 
     chain = (
         {"context": retriever, "question": RunnablePassthrough()}
@@ -145,6 +157,15 @@ if __name__ == "__main__":
         uploaded_file = st.file_uploader('Upload a file:', type=['pdf', 'docx', 'txt'])
         chunk_size = st.number_input('Chunk size:', min_value=100, max_value=2048, value=512, on_change=clear_history)
         k = st.number_input('k', min_value=1, max_value=20, value=3, on_change=clear_history)
+        
+        # Dropdown for role selection
+        role = st.selectbox('Select Role', ['Incident Commander', 'Operational manager'])
+        st.session_state['selected_role'] = role  # Store the selected role in session state
+
+        # Button to confirm role selection
+        if st.button('Assume Role'):
+            st.write(f'Assumed role: {role}')
+
         add_data = st.button('Add Data', on_click=clear_history)
 
         if uploaded_file and add_data:
@@ -157,7 +178,8 @@ if __name__ == "__main__":
 
                 data = load_document(file_name)
                 chunks = chunk_data(data, chunk_size=chunk_size)
-                vector_store = create_embeddings(chunks)
+                filtered_chunks = filter_chunks_by_role(chunks, role)
+                vector_store = create_embeddings(filtered_chunks)
                 # Further processing with vector_store
                 st.session_state.vs = vector_store
                 st.success('File Uploaded, chunked and embedded successfully.')
@@ -168,7 +190,8 @@ if __name__ == "__main__":
             st.error("Please enter a valid AWS Access Key.",icon="🚫")
         if 'vs' in st.session_state:
             vector_store = st.session_state.vs
-            answer = ask_and_get_answer(vector_store,q,k)
+            role = st.session_state.get('selected_role', None)  # Get the selected role from session state
+            answer = ask_and_get_answer(vector_store, q, role, k)
             st.text_area('LLM Answer: ',value=answer);
     
             st.divider()
