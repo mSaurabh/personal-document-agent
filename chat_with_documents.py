@@ -185,8 +185,8 @@ def save_guardrails(rules):
 
 if __name__ == "__main__":
     # Clear the system cache for ChromaDB
-    import chromadb
-    chromadb.api.client.SharedSystemClient.clear_system_cache()
+    # import chromadb
+    # chromadb.api.client.SharedSystemClient.clear_system_cache()
 
     # Load environment variables
     load_dotenv(find_dotenv(), override=True)
